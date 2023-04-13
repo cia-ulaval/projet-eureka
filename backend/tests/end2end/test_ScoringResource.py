@@ -1,6 +1,9 @@
 import json
-import unittest
+import pytest
 import requests
+from flask import Flask
+
+from backend.src.resource.ScoringResource import ScoringResource
 
 ANY_MAP_ID = 1
 ANY_PATH = [[1.0, 1.0], [2.0, 2.0]]
@@ -11,18 +14,26 @@ ANY_SCORE_REQUEST = {
 HTTP_OK = 200
 HEALTH_OK_RESPONSE = {"health": 'OK'}
 
-class TestScoringResource(unittest.TestCase):
-    def test__when_get_health__then_return_OK(self):
-        response = requests.get('http://localhost:5000/health')
-        actual_response = json.loads(response.text)
-        self.assertEqual(HTTP_OK, response.status_code)
-        self.assertEqual(HEALTH_OK_RESPONSE, actual_response)
 
-    def test__when_get_score__then_return_score(self):
-        response = requests.post('http://localhost:5000/score', json=ANY_SCORE_REQUEST)
-        print(response.text)
-        json_data = json.loads(response.text)
-        self.assertEqual(HTTP_OK, response.status_code)
-        self.assertTrue("score" in json_data)
-        self.assertTrue(type(json_data["score"]) is float)
+@pytest.fixture
+def client():
+    app = Flask(__name__)
+    ScoringResource(app)
+    app.config['TESTING'] = True
+    with app.test_request_context():
+        with app.test_client() as client:
+            yield client
 
+
+def test__when_get_health__then_OK_is_returned(client):
+    response = client.get('http://localhost:5000/health')
+    json_response = json.loads(response.data)
+    assert response.status_code == HTTP_OK
+    assert json_response == HEALTH_OK_RESPONSE
+
+
+def test__given_any_request__when_post_score__then_float_score_is_returned(client):
+    response = client.post('http://localhost:5000/score', json=ANY_SCORE_REQUEST)
+    json_response = json.loads(response.data)
+    assert response.status_code == HTTP_OK
+    assert type(json_response['score']) == float
