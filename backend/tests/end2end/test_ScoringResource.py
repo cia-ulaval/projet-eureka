@@ -1,6 +1,5 @@
 import json
 import pytest
-import requests
 from flask import Flask
 
 from backend.src.resource.ScoringResource import ScoringResource
