@@ -49,8 +49,7 @@ jobs:
       # run tests
       - name: Run tests
         run: |
-          cd backend
-          python -m pytest
+          python -m pytest .\backend\
 
   frontend:
     needs: changes
