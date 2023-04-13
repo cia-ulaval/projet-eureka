@@ -22,10 +22,3 @@ class ScoringResource:
             score_request = json.loads(request.data)
             score = self.__scoring_service.get_score(score_request)
             return jsonify({"score": score})
-
-
-
-
-
-
-
