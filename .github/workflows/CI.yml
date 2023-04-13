@@ -1,4 +1,4 @@
-name: My Workflow
+name: Eureka CI
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.backend }}
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     steps:
       # set up environment
       - name: Checkout code
@@ -51,7 +51,7 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.frontend }}
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     steps:
       # set up environment
       - name: Checkout code
