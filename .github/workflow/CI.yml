@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+
+jobs:
+  backend:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.modified, 'backend/') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start Flask server
+        run: |
+          cd backend
+          flask run &
+          sleep 5
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          pytest
+
+  frontend:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.modified, 'frontend/') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Lint Vue.js app
+        run: |
+          cd frontend
+          npm run lint
