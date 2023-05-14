@@ -1,0 +1,4 @@
+Informations sur map.json
+
+map[0]: 1 = rue
+map[1]: vitesse des rues
