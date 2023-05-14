@@ -1,8 +1,9 @@
 from astar import *
 
 #Testing AStar with custom tensors and lists
-obstacle_list = [[1,2],[3,4],[5,6],[4,5],[7,8],[6,5],[10,12],[4,9],[12,16],[20,24],[24,18],[24,20],[14,15]]
+obstacle_list = [[1,2],[3,4],[5,6],[4,5],[7,8],[6,5],[10,12],[4,9],[12,16],[20,18],[14,15]]
 
+"""
 ecolo = [[  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2] ,
             [1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] ,
             [3,3,6,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3] ,
@@ -57,11 +58,16 @@ ecolo = [[  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2] ,
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] ,
         ]
         ]
-        
+      """
+  
+import json
+with open('map.json') as file:
+    ecolo = json.load(file) #22 x 19
+#print(len(ecolo[1]))
 
-astar = AStar(25,25,[0,0],[24,24])
+astar = AStar(22,19,[0,0],[21,18])
 path = astar.run_AStar(obstacle_list, ecolo)
-print(get_stats_from_AStar(path,[24,24]))
+print(get_stats_from_AStar(path,[21,18]))
 
 
 #Testing diejkstra
@@ -76,4 +82,4 @@ print(get_stats_from_AStar(path))
 must_visit = [[0,0],[3,3],[5,4],[8,8],[10,11],[24,24]] #must contain start and end
 must_visit = [[0,0],[8,8],[5,4],[3,3],[10,11],[24,24]]
 
-print(path_through_specific_nodes(must_visit, obstacle_list, ecolo))
+#print(path_through_specific_nodes(must_visit, obstacle_list, ecolo))

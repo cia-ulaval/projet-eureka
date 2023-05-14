@@ -95,17 +95,21 @@ class AStar:
 
       #Dimension du co2 : 0 (valeur de co2)
       co2 = ecolo[0][node.x][node.y]
-
-      #Dimension du traffic : 1 (temps de retard de traffic entre 0 et 1) -- ADJUST
+      #print(node.x, node.y)
+      #Dimension du traffic : 2 (temps de retard de traffic entre 0 et 1) -- ADJUST
       traffic = ecolo[0][node.x][node.y]
 
-      #Dimension de la vitesse : 2 (vitesse (1, 2, 3 ou 4 selon 30, 50 70, 100)) -- ADJUST
-      vitesse = ecolo[0][node.x][node.y]
+      #Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
+      vitesse = ecolo[1][node.x][node.y] + 0.0001
 
-      #Dimension lumière/stop : 3 (soit 0 ou une valeur moyenne de tps d'attente entre 0 et 1) -- ADJUST
-      lum_stop = ecolo[1][node.x][node.y]
+      #Dimension lumière/stop :  (1 : arrêt, 2 : feu de circulation)
+      lum_stop = ecolo[2][node.x][node.y]
+      if lum_stop == 1: #arrêt
+          lum_stop == 0.1
+      else: #feu de circulation
+          lum_stop == 0.5
 
-      g = co2 * lum_stop + co2 * traffic + co2 * vitesse #-- ADJUST
+      g = co2 * lum_stop + co2 * traffic + co2 * 1/vitesse #-- ADJUST
 
       node.co2 = g
       node.waiting_time = traffic + lum_stop
@@ -451,7 +455,7 @@ def get_stats_from_path(path, ecolo):
   return co2_total, wait_total
 
 
-#Get shortest cost path going throush particular nodes (card coded way)
+#Get shortest cost path going throush particular nodes (hard coded way)
 def path_through_specific_nodes(must_visit, obstacle_list, ecolo):
   """
     Assuming we go to the physically closest node first,
