@@ -1,63 +1,132 @@
 <template>
     <TresCanvas clear-color="#82DBC5" window-size>
-        <TresPerspectiveCamera />
-        <OrbitControls/>
+        <TresPerspectiveCamera :position="[25, 15, 25]" :look-at="mapCenter"/>
         <TresScene>
             <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position">
                 <TresBoxGeometry :args="cube.dimensions"/>
                 <TresMeshBasicMaterial :color="cube.color"/>
             </TresMesh>
+            <TresMesh :position="car.position">
+                <TresBoxGeometry :args="car.dimensions"/>
+                <TresMeshBasicMaterial :color="car.color"/>
+            </TresMesh>
         </TresScene>
-        <TresAmbientLight :intensity="1"/>
+        <TresAmbientLight :intensity="1"/>map.length/2
     </TresCanvas>
 </template>
 
 <script>
-import {extend, TresCanvas} from '@tresjs/core'
-import { OrbitControls } from '@tresjs/cientos';
-extend({ OrbitControls })
+import {TresCanvas} from '@tresjs/core'
+import { extend } from '@tresjs/core'
+import { TextGeometry } from 'three/addons/geometries/TextGeometry'
+
+extend({ TextGeometry: TextGeometry })
 export default {
     name: 'ThreeCanvas',
     components:{
         TresCanvas: TresCanvas,
-        OrbitControls: OrbitControls
+    },
+    methods: {
+        tensorToMap() {
+            let map = []
+            for (let i = 0; i < this.tensor.length; i++) {
+                for (let j = 0; j < this.tensor[i].length; j++) {
+                    if (this.tensor[i][j] === 1) map.push({position: [i, 0, j], color: 'black', dimensions: [1, 1, 1]})
+                    if (this.tensor[i][j] === 0) map.push({position: [i, 0, j], color: '#41980A', dimensions: [1, 1, 1]})
+                    if (this.stopTensor[i][j] === 1) map.push({position: [i, 1, j], color: 'red', dimensions: [0.3, 0.3, 0.3]})
+                    if (this.stopTensor[i][j] === 2) map.push({position: [i, 1, j], color: 'blue', dimensions: [0.3, 0.3, 0.3]})
+
+                }
+            }
+            this.map = map
+        }
     },
     data(){
         return{
-          map:[
-            {position: [0, 1, 2], color: 'orange', dimensions: [1, 1, 1]},
-
-            {position: [0, 0, 0], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [1, 0, 0], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [2, 0, 0], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [3, 0, 0], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [4, 0, 0], color: 'grey', dimensions: [1, 1, 1]},
-
-            {position: [0, 0, 1], color: 'black', dimensions: [1, 1, 1]},
-            {position: [1, 0, 1], color: 'black', dimensions: [1, 1, 1]},
-            {position: [2, 0, 1], color: 'black', dimensions: [1, 1, 1]},
-            {position: [3, 0, 1], color: 'black', dimensions: [1, 1, 1]},
-            {position: [4, 0, 1], color: 'black', dimensions: [1, 1, 1]},
-
-            {position: [0, 0, 2], color: 'black', dimensions: [1, 1, 1]},
-            {position: [1, 0, 2], color: 'yellow', dimensions: [1, 1, 1]},
-            {position: [2, 0, 2], color: 'yellow', dimensions: [1, 1, 1]},
-            {position: [3, 0, 2], color: 'black', dimensions: [1, 1, 1]},
-            {position: [4, 0, 2], color: 'yellow', dimensions: [1, 1, 1]},
-
-            {position: [0, 0, 3], color: 'black', dimensions: [1, 1, 1]},
-            {position: [1, 0, 3], color: 'black', dimensions: [1, 1, 1]},
-            {position: [2, 0, 3], color: 'black', dimensions: [1, 1, 1]},
-            {position: [3, 0, 3], color: 'black', dimensions: [1, 1, 1]},
-            {position: [4, 0, 3], color: 'black', dimensions: [1, 1, 1]},
-
-            {position: [0, 0, 4], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [1, 0, 4], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [2, 0, 4], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [3, 0, 4], color: 'grey', dimensions: [1, 1, 1]},
-            {position: [4, 0, 4], color: 'grey', dimensions: [1, 1, 1]},
-          ]
+            mapCenter: [15, 1, 13],
+            car: {
+                position: [15, 1, 13],
+                color: 'orange',
+                dimensions: [0.5, 0.5, 0.5]
+            },
+            map: [],
+            tensor: [
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,1],
+                [1,0,0,1,0,0,0,0,0,1,0,1,1,1,0,0,1,1,1],
+                [1,0,0,1,0,0,0,0,0,1,1,1,0,1,1,1,1,0,1],
+                [1,1,1,1,1,1,1,1,1,1,0,0,0,1,0,0,1,0,1],
+                [1,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,1,0,1],
+                [1,1,1,0,0,0,1,1,1,1,0,1,0,1,0,0,1,0,1],
+                [1,0,1,1,1,1,1,0,0,1,1,1,0,1,0,0,1,1,1],
+                [1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,1,0,1,0,1,0,1,0,1,0,0,1,0,0,0,1],
+                [1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
+                [1,0,0,1,0,1,0,0,0,1,0,1,0,0,1,0,0,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1],
+                [1,0,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1],
+                [1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,1,0,0,1],
+                [1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,0,0,1],
+                [1,1,1,1,1,1,1,0,0,0,1,0,0,0,0,1,0,0,1],
+                [1,0,0,0,1,0,1,0,1,1,1,0,0,0,0,1,1,1,1],
+                [1,0,0,0,1,0,1,0,1,0,1,0,0,0,0,1,0,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            ],
+            speedTensor:[
+                [100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],
+                [100,0,0,50,0,0,0,0,0,50,0,0,0,50,0,0,50,0,70],
+                [100,0,0,50,0,0,0,0,0,50,0,50,50,50,0,0,50,50,70],
+                [100,0,0,50,0,0,0,0,0,50,50,50,0,50,50,50,50,0,70],
+                [100,50,50,50,50,50,50,50,50,50,0,0,0,50,0,0,50,0,70],
+                [100,0,0,0,0,0,0,0,0,50,0,50,50,50,0,0,50,0,70],
+                [100,50,50,0,0,0,50,50,50,50,0,50,0,50,0,0,50,0,70],
+                [100,0,50,50,50,50,50,0,0,50,50,50,0,50,0,0,50,50,70],
+                [100,0,0,0,0,0,50,0,0,50,0,0,0,50,0,0,50,0,70],
+                [100,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70],
+                [100,0,0,50,0,30,0,30,0,30,0,30,0,0,30,0,0,0,70],
+                [100,0,0,50,50,30,50,50,50,30,50,30,30,30,30,0,0,0,70],
+                [100,0,0,50,0,30,0,0,0,30,0,30,0,0,30,0,0,0,70],
+                [100,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70],
+                [100,0,30,0,0,0,50,0,50,0,0,0,0,30,0,0,0,0,70],
+                [100,0,30,0,0,0,50,50,50,50,30,30,30,30,50,50,0,0,70],
+                [100,0,30,30,30,0,50,0,50,0,50,0,0,50,0,30,0,0,70],
+                [100,0,30,0,30,0,50,50,50,50,50,50,50,50,50,30,0,0,70],
+                [100,30,30,30,30,30,30,0,0,0,50,0,0,0,0,30,0,0,70],
+                [100,0,0,0,30,0,30,0,30,30,50,0,0,0,0,30,30,30,70],
+                [100,0,0,0,30,0,30,0,30,0,50,0,0,0,0,30,0,0,70],
+                [100,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70]
+            ],
+            stopTensor: [
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+                [0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
+                [0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,1,0,0,2,2,0,2,0,0,0,0,2,0,1,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,2,0,0,2,1,0,2,0,0,0,0,0,0,0,0,0,2],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,2,0,2,0,1,0,0,1,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,1,0,0,2,0,0,0,0,0],
+                [0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0,2]
+            ]
         }
+    },
+    mounted() {
+        this.tensorToMap();
     }
+
 }
 </script>
