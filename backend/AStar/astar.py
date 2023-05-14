@@ -7,9 +7,12 @@ Original file is located at
     https://colab.research.google.com/drive/1KqCMcLOuNYojeKkmOixsH4qBES1qxG8q
 """
 
-# f = g + h
-# g : empreinte écologique à date (prev + empreinte de la case)
-# h : heuristique de distance au but sqrt(diff x ^2 + diff y ^2)
+""" Contient les fonctions suivantes :
+        - A*
+        - Dijkstra
+        - get_stats_from_AStar (co2 + temps d'attente d'un chemin du AI)
+        - get_stats_from_path (co2 + temps d'attente d'un chemin général)
+"""
 
 #https://github.com/ademakdogan/Implementation-of-A-Algorithm-Visualization-via-Pyp5js-/blob/master/astar/astar.py
 
@@ -52,6 +55,7 @@ class Node:
         if neighbor_y > 0: 
             self.neighbors.append(grid[neighbor_x][neighbor_y-1])
         #diagonals
+        """
         if neighbor_x > 0 and neighbor_y > 0:
             self.neighbors.append(grid[neighbor_x-1][neighbor_y-1])
         if neighbor_x < columns -1 and neighbor_y > 0:
@@ -60,6 +64,7 @@ class Node:
             self.neighbors.append(grid[neighbor_x-1][neighbor_y+1])
         if neighbor_x < columns -1 and neighbor_y < rows -1:
             self.neighbors.append(grid[neighbor_x+1][neighbor_y+1]) 
+            """
 
 
         
@@ -94,25 +99,31 @@ class AStar:
     def g_score(node, ecolo): #Adapt this to the tensor values
 
       #Dimension du co2 : 0 (valeur de co2)
-      co2 = ecolo[0][node.x][node.y]
-      #print(node.x, node.y)
-      #Dimension du traffic : 2 (temps de retard de traffic entre 0 et 1) -- ADJUST
-      traffic = ecolo[0][node.x][node.y]
+      co2 = 18.0 #centaines de g co2 par km en moyenne -- ADJUST
+
+      #Dimension du traffic : 3 (temps de retard de traffic entre 0 et 1 : 0 pas de traffic, 1 plein de traffic)
+      traffic = float(ecolo[3][node.x][node.y])
 
       #Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
-      vitesse = ecolo[1][node.x][node.y] + 0.0001
-
-      #Dimension lumière/stop :  (1 : arrêt, 2 : feu de circulation)
+      vitesse = float(ecolo[1][node.x][node.y]) * (1-traffic) 
+            
+      #Dimension lumière/stop : 2 (1 : arrêt, 2 : feu de circulation)
       lum_stop = ecolo[2][node.x][node.y]
-      if lum_stop == 1: #arrêt
-          lum_stop == 0.1
-      else: #feu de circulation
-          lum_stop == 0.5
 
-      g = co2 * lum_stop + co2 * traffic + co2 * 1/vitesse #-- ADJUST
+      #tps moyen à un arrêt (10 secondes)
+      if lum_stop == 1: 
+          lum_stop = 0.1
+      #feu de circulation
+      #tps moyen à un feu de circulation est 75 secondes
+      elif lum_stop == 2: 
+          lum_stop = 0.75 
+
+      g = co2 * lum_stop + co2 * 1/vitesse
+      #print(g, co2, lum_stop, vitesse)
 
       node.co2 = g
-      node.waiting_time = traffic + lum_stop
+      node.waiting_time = traffic*100 + lum_stop*100 #en secondes
+      #vitesse moyenne
 
       #print(f"g :{g}")
       return g + 1
@@ -234,10 +245,47 @@ class AStar:
                 break
 
         return final_path
+    
+#---------------------------- Utility functions -------------------------
 
+#Get obstacle list for A*
+def get_obstacle_list(map):
+    obstacle_list = []
+    #print(np.shape(ecolo))
+    for i in range(np.shape(map)[1]):
+        for j in range(np.shape(map)[2]):
+            if map[0][i][j] == 0:
+                obstacle_list.append([i,j])
+    return obstacle_list
+
+#Generate traffic
+def generate_traffic(map,p):
+    #p is the probability of there being traffic
+    traffic = [[0 for i in range(19)] for j in range(22)]
+    p = 0.3 #probability of traffic
+    for i in range(np.shape(map)[1]):
+        for j in range(np.shape(map)[2]):
+            if map[0][i][j] == 1:
+                s = np.random.sample()
+                if s <= p:
+                    t = np.random.sample()
+                    traffic[i][j] = t
+                else:
+                    traffic[i][j] = 0
+    return traffic    
 
 #Get stats from the AStar path (they have special properties)
 def get_stats_from_AStar(path, end, add_last = True):
+  """
+        input
+            path : list des coordonnées (x,y) des noeuds visités
+            end : position finale
+            add_last : Ajouter manuellement la fin du trajet dans la liste finale
+        output
+            solution_path : liste du trajet emprunté
+            co2_total : total co2 sur le trajet (g/km)
+            waiting_time_total : temps d'attente total (secondes)
+  """
   #Total co2, total waiting time and final path in a list
   co2_total = 0
   solution_path = []
@@ -248,13 +296,111 @@ def get_stats_from_AStar(path, end, add_last = True):
 
     co2_total += p.co2
     waiting_time_total += p.waiting_time
+
+    #print(p.co2, p.waiting_time)
   if add_last :
     x,y = end  
     solution_path.append((x,y)) #add end state
 
   return co2_total, waiting_time_total, solution_path
 
+#Get stats from any path
+def get_stats_from_path(path, ecolo):
+  """
+    inputs
+      path : list of (x,y) coordinates that show the path taken ((x,y) must match with the grid map)
+      ecolo : tenseur des informations relatives à la carte
+    output
+      total co2 (en g/km) and waiting time (en secondes) on this path
+  """
+  co2_total = 0
+  wait_total = 0
 
+  for x,y in path:
+    #Dimension du co2 : 0 (valeur de co2)
+    co2 = 18
+
+    #Dimension du traffic : 3 (temps de retard de traffic entre 0 et 1. 0 : pas de traffic, 1 plein de traffic)
+    traffic = float(ecolo[3][x][y])
+
+    #Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
+    vitesse = float(ecolo[1][x][y]) * (1-traffic)
+
+    #Dimension lumière/stop : 2
+    lum_stop = ecolo[2][x][y]
+    #Stop
+    if lum_stop == 1: 
+        lum_stop = 0.1
+    #feu de circulation
+    elif lum_stop == 2: 
+        lum_stop = 0.75 
+
+    #co2 total
+    c = co2 * (lum_stop + 1/vitesse)
+    #print(lum_stop, vitesse, 1/vitesse, traffic, c)
+
+    #wait total
+    w = 100*(lum_stop + traffic)
+
+    co2_total += c
+    wait_total += w
+  
+  return co2_total, wait_total
+
+#-------------- Shortest path trough particular nodes ----------------------
+
+#Get shortest cost path going throush particular nodes (hard coded way)
+def path_through_specific_nodes(must_visit, obstacle_list, ecolo):
+  """
+    Assuming we go to the physically closest node first,
+    We compute the least cost path between each must visit node
+    input
+      must_visit : list of nodes to go through in the path
+    output 
+      path : final path that goes through all must visit nodes
+      total_c02 : total co2 cost of the path
+      total_wait : total wait time during the path
+  """
+  #Order the must visit by closest to start point
+  start = must_visit[0]
+  end = must_visit[-1]
+  distances = []
+
+  for x,y in must_visit[1:-1] :
+    distances.append(np.sqrt((x-start[0])**2 + (y-start[1])**2))
+  inds = np.argsort(distances)
+
+  tmp = must_visit[1:-1]
+
+  must_visit = [tmp[i] for i in inds]
+  must_visit.append(end)
+  must_visit = [start] + must_visit
+
+  #initialisation
+  path = []
+  total_co2 = 0
+  total_wait = 0
+
+  #Find smallest cost path between each must visit node
+  for v,u in zip(must_visit, must_visit[1:]) :
+    x,y = v
+    end_x, end_y = u
+    #print(x,y,end_x,end_y)
+    astar = AStar(25,25,[x,y],[end_x,end_y])
+    p = astar.run_AStar(obstacle_list, ecolo)
+      
+    c, w, s = get_stats_from_AStar(p, u, add_last = False)
+    total_co2 += c
+    total_wait += w
+    
+    #Add to final path
+    for e in s:
+      path.append(e)
+
+  return total_co2, total_wait, path
+
+
+# ---------------- Backup algo -------------------------------------
 """If AStar does not seem optimal, can use Dijsktra."""
 
 #Dijsktra
@@ -287,26 +433,36 @@ class Dijsktra:
         return distance
 
     @staticmethod
-    def g_score(node, ecolo):
+    def g_score(node, ecolo): #Adapt this to the tensor values
 
       #Dimension du co2 : 0 (valeur de co2)
-      co2 = ecolo[0][node.x][node.y]
+      co2 = 18 #centaines de g co2 par km en moyenne -- ADJUST
 
-      #Dimension du traffic : 1 (temps de retard de traffic entre 0 et 1)
+      #Dimension du traffic : 3 (temps de retard de traffic entre 0 et 1 : 0 plein de traffic, 1 pas de traffic) -- ADJUST
+      traffic = ecolo[3][node.x][node.y]
 
-      #Dimension de la vitesse : 2 (vitesse (1, 2, 3 ou 4 selon 30, 50 70, 100))
+      #Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
+      vitesse = ecolo[1][node.x][node.y] * traffic             
 
-      #Dimension lumière/stop : 3 (soit 0 ou une valeur moyenne de tps d'attente entre 0 et 1)
-      lum_stop = ecolo[1][node.x][node.y]
+      #Dimension lumière/stop : 2 (1 : arrêt, 2 : feu de circulation)
+      lum_stop = ecolo[2][node.x][node.y]
 
-      #g = co2 * vitesse + co2 * traffic + co2 * lumiere
-      g = co2 * lum_stop #+ co2 * traffic + co2 * vitesse
+      #tps moyen à un arrêt (10 secondes)
+      if lum_stop == 1: 
+          lum_stop == 0.1
+      #feu de circulation
+      #tps moyen à un feu de circulation est 75 secondes
+      elif lum_stop == 2: 
+          lum_stop == 0.75 
+
+      g = co2 * (lum_stop + 1/vitesse)
 
       node.co2 = g
-      #node.waiting_time = traffic + lum_stop
+      node.waiting_time = traffic*100 + lum_stop*100 #en secondes
+      #vitesse moyenne
 
       #print(f"g :{g}")
-      return g #+ AStar.h_score(node,end)
+      return g + 1
 
     @staticmethod
     def create_grid(cols, rows): #don't need this
@@ -418,89 +574,6 @@ class Dijsktra:
         return final_path
 
 
-#Utility function to extract statistics from any path
-def get_stats_from_path(path, ecolo):
-  """
-    inputs
-      path : list of (x,y) coordinates that show the path taken ((x,y) must match with the grid map)
-      ecolo : tenseur des informations relatives à la carte
-    output
-      total co2 and waiting time on this path
-  """
-  co2_total = 0
-  wait_total = 0
-
-  for x,y in path:
-    #Dimension du co2 : 0 (valeur de co2)
-    co2 = ecolo[0][x][y]
-
-    #Dimension du traffic : 1 (temps de retard de traffic entre 0 et 1)
-    traffic = ecolo[1][x][y]
-
-    #Dimension de la vitesse : 2 (vitesse (1, 2, 3 ou 4 selon 30, 50 70, 100))
-    vitesse = ecolo[2][x][y]
-
-    #Dimension lumière/stop : 3 (soit 0 ou une valeur moyenne de tps d'attente entre 0 et 1)
-    lum_stop = ecolo[3][x][y]
-
-    #co2 total
-    c = co2 * lum_stop + co2 * traffic + co2 * vitesse
-
-    #wait total
-    w = lum_stop + traffic
-
-    co2_total += c
-    wait_total += w
-  
-  return co2_total, wait_total
 
 
-#Get shortest cost path going throush particular nodes (hard coded way)
-def path_through_specific_nodes(must_visit, obstacle_list, ecolo):
-  """
-    Assuming we go to the physically closest node first,
-    We compute the least cost path between each must visit node
-    input
-      must_visit : list of nodes to go through in the path
-    output 
-      path : final path that goes through all must visit nodes
-      total_c02 : total co2 cost of the path
-      total_wait : total wait time during the path
-  """
-  #Order the must visit by closest to start point
-  start = must_visit[0]
-  end = must_visit[-1]
-  distances = []
 
-  for x,y in must_visit[1:-1] :
-    distances.append(np.sqrt((x-start[0])**2 + (y-start[1])**2))
-  inds = np.argsort(distances)
-
-  tmp = must_visit[1:-1]
-
-  must_visit = [tmp[i] for i in inds]
-  must_visit.append(end)
-  must_visit = [start] + must_visit
-
-  #initialisation
-  path = []
-  total_co2 = 0
-  total_wait = 0
-
-  #Find smallest cost path between each must visit node
-  for v,u in zip(must_visit, must_visit[1:]) :
-    x,y = v
-    end_x, end_y = u
-    #print(x,y,end_x,end_y)
-    astar = AStar(25,25,[x,y],[end_x,end_y])
-    p = astar.run_AStar(obstacle_list, ecolo)
-      
-    c, w, s = get_stats_from_AStar(p, u, add_last = False)
-    total_co2 += c
-    total_wait += w
-    
-    #Add to final path
-    for e in s:
-      path.append(e)
-
-  return total_co2, total_wait, path
