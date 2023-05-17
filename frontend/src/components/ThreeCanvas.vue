@@ -1,3 +1,33 @@
+<script setup>
+import {useFBX} from '@tresjs/cientos'
+import {shallowRef} from "vue";
+import {useRenderLoop} from "@tresjs/core";
+
+const model = await useFBX('/models/Car.fbx')
+
+const boxRef = shallowRef(null)
+const intersectionRef = shallowRef(null)
+
+const {onLoop} = useRenderLoop()
+
+let carPosition = [0, 0]
+
+onLoop(({delta}) => {
+    if (boxRef.value) {
+        let distance = 1000 * delta
+        for (let i = 0; i < boxRef.value.length; i++) {
+            let cube = boxRef.value[i];
+            cube.position.z -= distance;
+        }
+        for (let i = 0; i < intersectionRef.value.length; i++) {
+            let cube = intersectionRef.value[i];
+            cube.position.z -= distance;
+        }
+        carPosition[1] -= distance;
+        console.log(carPosition)
+    }
+})
+</script>
 <template>
     <div class="container">
         <div class="gamePad">
@@ -9,51 +39,42 @@
             <button class="arrows" @click="move('right')"><img src="../assets/arrow.svg" class="right"></button>
         </div>
         <TresCanvas clear-color="#82DBC5" window-size="true" class="canvas">
-            <TresPerspectiveCamera :position="[25, 15, 25]" :look-at="mapCenter"/>
+            <TresPerspectiveCamera :position="[0, 300, -800]" :look-at="mapCenter" :far="100000"/>
+        <OrbitControls/>
             <TresScene>
-                <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position">
+                <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
                     <TresBoxGeometry :args="cube.dimensions"/>
                     <TresMeshBasicMaterial :color="cube.color"/>
                 </TresMesh>
-                <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position">
+                <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position" ref="intersectionRef">
                     <TresBoxGeometry :args="cube.dimensions"/>
                     <TresMeshBasicMaterial :color="cube.color"/>
                 </TresMesh>
-                <TresMesh v-bind="carPosition">
-                    <TresBoxGeometry :args="car.dimensions"/>
-                    <TresMeshBasicMaterial :color="car.color"/>
-                </TresMesh>
-            </TresScene>
-            <TresAmbientLight/>map.length/2
+            <Suspense>
+                <TresMesh v-bind="model"/>
+            </Suspense>
+        </TresScene>
+            <TresAmbientLight/>
+        map.length/2
         </TresCanvas>
     </div>
 </template>
 
 <script>
-import {TresCanvas, useRenderLoop } from '@tresjs/core'
-import {shallowRef} from 'vue'
+import {TresCanvas} from '@tresjs/core'
+import {OrbitControls} from "@tresjs/cientos";
+
+const CUBE_SIZE = 400
+const CAR_SIZE = 200
 
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
-
 export default {
     name: 'ThreeCanvas',
-    components:{
+    components: {
+        OrbitControls: OrbitControls,
         TresCanvas: TresCanvas,
-    },
-    setup: function () {
-
-        const { onLoop } = useRenderLoop()
-
-        const boxRef = shallowRef(null)
-
-
-        onLoop(() => {
-            if(boxRef.value){
-                console.log(boxRef.value.position)
-            }
-        })
     },
     data(){
         return{
@@ -68,11 +89,6 @@ export default {
             tensor: tensor,
             speedTensor: speedTensor,
             stopTensor: stopTensor,
-        }
-    },
-    computed: {
-        carPosition(){
-            return this.car
         }
     },
     methods: {
@@ -127,8 +143,8 @@ export default {
             let map = []
             for (let i = 0; i < this.tensor.length; i++) {
                 for (let j = 0; j < this.tensor[i].length; j++) {
-                    if (this.tensor[i][j] === 1) map.push({position: [i, 0, j], color: 'black', dimensions: [1, 1, 1]})
-                    if (this.tensor[i][j] === 0) map.push({position: [i, 0, j], color: '#41980A', dimensions: [1, 1, 1]})
+                    if (this.tensor[i][j] === 1) map.push({position: [i*CUBE_SIZE, -CAR_SIZE, j*CUBE_SIZE], color: 'black', dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]})
+                    if (this.tensor[i][j] === 0) map.push({position: [i*CUBE_SIZE, -CAR_SIZE, j*CUBE_SIZE], color: '#41980A', dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]})
 
                 }
             }
@@ -138,12 +154,13 @@ export default {
             let intersection = []
             for (let i = 0; i < this.stopTensor.length; i++) {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
-                    if (this.stopTensor[i][j] === 1) intersection.push({position: [i, 1, j], color: 'red', dimensions: [0.3, 0.3, 0.3]})
-                    if (this.stopTensor[i][j] === 2) intersection.push({position: [i, 1, j], color: 'blue', dimensions: [0.3, 0.3, 0.3]})
+                    if (this.stopTensor[i][j] === 0) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'white', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
+                    if (this.stopTensor[i][j] === 1) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'red', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
+                    if (this.stopTensor[i][j] === 2) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'blue', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
                 }
             }
             this.intersection = intersection
-        },
+        }
     },
     mounted() {
         this.tensorToMap();
