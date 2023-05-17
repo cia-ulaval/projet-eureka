@@ -6,7 +6,7 @@ from backend.src.service.ScoringService import ScoringService
 
 
 class ScoringResource:
-    def __init__(self, app: Flask, scoring_service: ScoringService = ScoringService()):
+    def __init__(self, app: Flask, scoring_service: ScoringService):
         self.__app = app
         self.__register_routes()
 
@@ -20,5 +20,12 @@ class ScoringResource:
         @self.__app.route("/score", methods=["POST"])
         def get_score():
             score_request = json.loads(request.data)
-            score = self.__scoring_service.get_score(score_request)
-            return jsonify({"score": score})
+            human_path : list[(int, int)] = score_request["path"]
+            co2_total, wait_total = self.__scoring_service.get_score(human_path)
+            ai_path: list[(int, int)] = self.__scoring_service.get_best_path()
+            ai_co2_total, ai_wait_total = self.__scoring_service.get_score(ai_path)
+
+            return jsonify(
+                {"human_stats": {"co2": co2_total, "wait": wait_total},
+                 "AI_path": ai_path,
+                 "AI_stats": {"co2": ai_co2_total, "wait": ai_wait_total}})
