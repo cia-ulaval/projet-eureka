@@ -3,7 +3,11 @@ import {useFBX} from '@tresjs/cientos'
 import {shallowRef} from "vue";
 import {useRenderLoop} from "@tresjs/core";
 
+// const CUBE_SIZE = 400
+
 const model = await useFBX('/models/Car.fbx')
+
+// const tensorFile = require('../data/tensor.json')
 
 const boxRef = shallowRef(null)
 const intersectionRef = shallowRef(null)
@@ -11,20 +15,74 @@ const intersectionRef = shallowRef(null)
 const {onLoop} = useRenderLoop()
 
 let carPosition = [0, 0]
+let carOrientation = "up"
+
+function moveMap(delta) {
+    let dx = 0
+    let dy = 0
+    switch (carOrientation) {
+        case "up":
+            dy = 1
+            break;
+        case "down":
+            dy = -1
+            break;
+        case "left":
+            dx = 1
+            break;
+        case "right":
+            dx = -1
+            break;
+    }
+
+    let distance = 1000*delta
+
+    for (let i = 0; i < boxRef.value.length; i++) {
+        let cube = boxRef.value[i];
+        cube.position.z -= dy*distance
+        cube.position.x -= dx*distance
+    }
+    for (let i = 0; i < intersectionRef.value.length; i++) {
+        let cube = intersectionRef.value[i];
+        cube.position.z -= dy*distance;
+        cube.position.x -= dx*distance;
+    }
+    carPosition[0] += dx*distance
+    carPosition[1] += dy*distance
+}
+
+function isNextCubeAnIntersection() {
+    // according to the car position and orientation and the tensor, check if the next cube is an intersection, i.e one of the 3 values is 1
+    // if it is, return true, else return false
+    let row = Math.round(carPosition[0] / CUBE_SIZE);
+    let col = Math.round(carPosition[1] / CUBE_SIZE);
+
+    switch (carOrientation) {
+        case "up":
+            return tensor[row][col + 1] === 1 || tensor[row][col - 1] === 1 || tensor[row - 1][col] === 1;
+        case "down":
+            return tensor[row][col + 1] === 1 || tensor[row][col - 1] === 1 || tensor[row + 1][col] === 1;
+        case "left":
+            return tensor[row][col - 1] === 1 || tensor[row + 1][col] === 1 || tensor[row - 1][col] === 1;
+        case "right":
+            return tensor[row][col + 1] === 1 || tensor[row + 1][col] === 1 || tensor[row - 1][col] === 1;
+    }
+}
 
 onLoop(({delta}) => {
     if (boxRef.value) {
-        let distance = 1000 * delta
-        for (let i = 0; i < boxRef.value.length; i++) {
-            let cube = boxRef.value[i];
-            cube.position.z -= distance;
+        if (isNextCubeAnIntersection()) {
+            if(nextDirection !== null) {
+                carOrientation = nextDirection
+                moveMap(delta)
+                console.log(carOrientation)
+            }
         }
-        for (let i = 0; i < intersectionRef.value.length; i++) {
-            let cube = intersectionRef.value[i];
-            cube.position.z -= distance;
+        else {
+            nextDirection = null
+            moveMap(delta)
+            console.log(carOrientation)
         }
-        carPosition[1] -= distance;
-        console.log(carPosition)
     }
 })
 </script>
@@ -67,6 +125,9 @@ import {OrbitControls} from "@tresjs/cientos";
 const CUBE_SIZE = 400
 const CAR_SIZE = 200
 
+let nextDirection = null
+console.log(nextDirection)
+
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
@@ -95,17 +156,16 @@ export default {
         move(direction){
             switch (direction) {
                 case 'up':
-                    this.car.position[0] -= 1;
-                    console.log(this.car.position)
+                    nextDirection = 'up'
                     break;
                 case 'left':
-                    // Code to move left
+                    nextDirection = 'left'
                     break;
                 case 'right':
-                    // Code to move right
+                    nextDirection = 'right'
                     break;
                 case 'down':
-                    // Code to move down
+                    nextDirection = 'down'
                     break;
                 default:
                     break;
@@ -145,7 +205,6 @@ export default {
                 for (let j = 0; j < this.tensor[i].length; j++) {
                     if (this.tensor[i][j] === 1) map.push({position: [i*CUBE_SIZE, -CAR_SIZE, j*CUBE_SIZE], color: 'black', dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]})
                     if (this.tensor[i][j] === 0) map.push({position: [i*CUBE_SIZE, -CAR_SIZE, j*CUBE_SIZE], color: '#41980A', dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]})
-
                 }
             }
             this.map = map
@@ -154,13 +213,12 @@ export default {
             let intersection = []
             for (let i = 0; i < this.stopTensor.length; i++) {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
-                    if (this.stopTensor[i][j] === 0) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'white', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
                     if (this.stopTensor[i][j] === 1) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'red', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
                     if (this.stopTensor[i][j] === 2) intersection.push({position: [i*CUBE_SIZE, CUBE_SIZE-CAR_SIZE, j*CUBE_SIZE], color: 'blue', dimensions: [0.3*CUBE_SIZE, 0.3*CUBE_SIZE, 0.3*CUBE_SIZE]})
                 }
             }
             this.intersection = intersection
-        }
+        },
     },
     mounted() {
         this.tensorToMap();
