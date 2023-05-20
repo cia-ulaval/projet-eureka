@@ -22,8 +22,7 @@ class ScoringResource:
             score_request = json.loads(request.data)
             human_path : list[(int, int)] = score_request["path"]
             co2_total, wait_total = self.__scoring_service.get_score(human_path)
-            ai_path: list[(int, int)] = self.__scoring_service.get_best_path()
-            ai_co2_total, ai_wait_total = self.__scoring_service.get_score(ai_path)
+            ai_co2_total, ai_wait_total, ai_path = self.__scoring_service.get_ai_score()
 
             return jsonify(
                 {"human_stats": {"co2": co2_total, "wait": wait_total},

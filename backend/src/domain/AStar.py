@@ -120,7 +120,7 @@ class AStar:
         if current_node == end:
             temp = current_node
             while temp.previous:
-                final_path.append([temp.previous.x, temp.previous.y])
+                final_path.append(temp)
                 temp = temp.previous
 
         open_set = AStar.clean_open_set(open_set, current_node)
