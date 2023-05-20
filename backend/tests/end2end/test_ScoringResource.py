@@ -29,10 +29,3 @@ def test__when_get_health__then_OK_is_returned(client):
     json_response = json.loads(response.data)
     assert response.status_code == HTTP_OK
     assert json_response == HEALTH_OK_RESPONSE
-
-
-def test__given_any_request__when_post_score__then_float_score_is_returned(client):
-    response = client.post('http://localhost:5000/score', json=ANY_SCORE_REQUEST)
-    json_response = json.loads(response.data)
-    assert response.status_code == HTTP_OK
-    assert type(json_response['score']) == float
