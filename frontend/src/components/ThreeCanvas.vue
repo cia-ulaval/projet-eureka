@@ -131,7 +131,14 @@ export default {
             let map = []
             for (let i = 0; i < this.tensor.length; i++) {
                 for (let j = 0; j < this.tensor[i].length; j++) {
-                    if (this.tensor[i][j] === 1) map.push({position: [i, 0, j], color: 'black', dimensions: [1, 1, 1]})
+                  if (this.tensor[i][j] === 1)
+                  {
+                    // Shows traffic
+                    if (this.trafficTensor[i][j] < 0.25 ) map.push({position: [i, 0, j], color: 'black', dimensions: [1, 1, 1]})
+                    else if (0.25 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.5 ) map.push({position: [i, 0, j], color: 'yellow', dimensions: [1, 1, 1]})
+                    else if (0.5 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.75 ) map.push({position: [i, 0, j], color: 'orange', dimensions: [1, 1, 1]})
+                    else if (0.75 <= this.trafficTensor[i][j]) map.push({position: [i, 0, j], color: 'red', dimensions: [1, 1, 1]})
+                  }
                     if (this.tensor[i][j] === 0) map.push({position: [i, 0, j], color: '#41980A', dimensions: [1, 1, 1]})
 
                 }
@@ -155,10 +162,10 @@ export default {
           this.trafficTensor = mapInfos.traffic;
       }
     },
-    mounted() {
+    async mounted() {
         this.tensorToIntersection();
+        await this.fetchMap();
         this.tensorToMap();
-        this.fetchMap();
     }
 
 }

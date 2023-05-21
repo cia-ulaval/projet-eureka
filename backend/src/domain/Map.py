@@ -28,7 +28,7 @@ class Map:
                     s = np.random.sample()
                     if s <= self.traffic_probability:
                         t = np.random.sample()
-                        traffic[i][j] = t
+                        traffic[i][j] = round(t, 3)
                     else:
                         traffic[i][j] = 0
 
