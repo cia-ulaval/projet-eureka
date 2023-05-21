@@ -36,6 +36,7 @@ import {shallowRef} from 'vue'
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
+import { getMap } from '@/js/map.js'
 
 export default {
     name: 'ThreeCanvas',
@@ -68,6 +69,9 @@ export default {
             tensor: tensor,
             speedTensor: speedTensor,
             stopTensor: stopTensor,
+            trafficTensor : [],
+            start : [],
+            end : []
         }
     },
     computed: {
@@ -144,10 +148,17 @@ export default {
             }
             this.intersection = intersection
         },
+        async fetchMap() {
+          const mapInfos = await getMap();
+          this.start = mapInfos.start;
+          this.end = mapInfos.end;
+          this.trafficTensor = mapInfos.traffic;
+      }
     },
     mounted() {
-        this.tensorToMap();
         this.tensorToIntersection();
+        this.tensorToMap();
+        this.fetchMap();
     }
 
 }
