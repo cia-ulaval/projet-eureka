@@ -157,7 +157,18 @@ let toDirection = null
 let distanceToCross = null
 let path = []
 
-// TODO : Ajouter tous les points en coordonnée tenseur aux path (ne pas dupliquer précedent)
+function addToPositionPath() {
+    let tensorPosition = getTensorPosition()
+    if (path.length === 0) {
+        path.push(tensorPosition)
+    } else {
+        let last = path[path.length - 1]
+        if (last[0] !== tensorPosition[0] || last[1] !== tensorPosition[1]) {
+            path.push(tensorPosition)
+        }
+    }
+}
+
 // TODO: change base car position
 // TODO: caller un truc lorsque la voiture est sur la fin
 
@@ -196,10 +207,8 @@ onLoop(({delta}) => {
                             carOrientation = toDirection
                             path.push(toDirection)
                         }
-                        distanceToCross -= moveMap(delta)
                         break;
                     } else {
-                        // state = "moving"
                         distanceToCross = null
                         break;
                     }
@@ -210,6 +219,7 @@ onLoop(({delta}) => {
                     break;
                 }
         }
+        addToPositionPath()
     }
 })
 </script>
