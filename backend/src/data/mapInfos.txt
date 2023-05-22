@@ -1,0 +1,5 @@
+Informations sur map.json
+
+map[0]: 1 = rue
+map[1]: vitesse des rues
+map[2]: 1 = arrêt, 2 = feu de criculation

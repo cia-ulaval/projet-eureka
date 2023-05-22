@@ -330,6 +330,7 @@ let nextDirection = null
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
+import { getMap } from '@/js/map.js'
 
 export default {
     name: 'ThreeCanvas',
@@ -351,8 +352,14 @@ export default {
             tensor: tensor,
             speedTensor: speedTensor,
             stopTensor: stopTensor,
-            start : [4, 6],
-            end : [10, 14]
+            trafficTensor : [],
+            start : [],
+            end : []
+        }
+    },
+    computed: {
+        carPosition(){
+            return this.car
         }
     },
     methods: {
@@ -454,11 +461,19 @@ export default {
             })
             for (let i = 0; i < this.tensor.length; i++) {
                 for (let j = 0; j < this.tensor[i].length; j++) {
-                    if (this.tensor[i][j] === 1) map.push({
-                        position: [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset],
-                        map: this.findAppropriateMap([i, j]),
-                        dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
-                    })
+                    if (this.tensor[i][j] === 1)
+                    {
+                      let position = [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset]
+                      let appropriateMap = this.findAppropriateMap([i, j])
+                      let dimensions = [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
+                      let color = 'black'
+                      // Shows traffic
+                      console.log(this.trafficTensor[i][j])
+                      if (0.25 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.5 ) color = 'yellow'
+                      else if (0.5 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.75 ) color = 'orange'
+                      else if (0.75 <= this.trafficTensor[i][j]) color = 'red'
+                      map.push({position: position, color: color, dimensions: dimensions, map: appropriateMap})
+                    }
                     if (this.tensor[i][j] === 0) map.push({
                         position: [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset],
                         map: 'grass',
@@ -488,14 +503,21 @@ export default {
             }
             this.intersection = intersection
         },
+        async fetchMap() {
+          const mapInfos = await getMap();
+          this.start = mapInfos.start;
+          this.end = mapInfos.end;
+          this.trafficTensor = mapInfos.traffic;
+      }
     },
-    mounted() {
-        START = this.start
-        END = this.end
+    async mounted() {
         setShowModal = this.setShowModal
         getShowModal = this.getShowModal
-        this.tensorToMap();
+        await this.fetchMap();
+        START = this.start
+        END = this.end
         this.tensorToIntersection();
+        this.tensorToMap();
     }
 
 }
