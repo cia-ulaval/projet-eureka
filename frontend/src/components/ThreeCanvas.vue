@@ -2,6 +2,7 @@
 import {useFBX} from '@tresjs/cientos'
 import {shallowRef} from "vue";
 import {useRenderLoop, useTexture} from "@tresjs/core";
+import ResultModal from "@/components/ResultModal.vue";
 
 
 const upDownTexture = await useTexture({
@@ -25,7 +26,7 @@ const intersectionRef = shallowRef(null)
 
 const {onLoop} = useRenderLoop()
 
-let carPosition = [0, 0]
+let carPosition = null
 let carOrientation = "up"
 
 function moveMap(delta) {
@@ -145,10 +146,39 @@ function getAvailableTurns() {
     return turns
 }
 
+function setCarOrientation(newOrientation) {
+    carOrientation = newOrientation
+    switch (newOrientation) {
+        case "up":
+            model.rotation.y = 0
+            break;
+        case "down":
+            model.rotation.y = Math.PI
+            break;
+        case "left":
+            model.rotation.y = Math.PI / 2
+            break;
+        case "right":
+            model.rotation.y = -Math.PI / 2
+            break;
+    }
+    model.updateWorldMatrix(true, true)
+}
+
 function getTensorPosition() {
     let row = Math.round(carPosition[0] / CUBE_SIZE);
     let col = Math.round(carPosition[1] / CUBE_SIZE);
     return [row, col]
+}
+
+function getRealWorldCoordinates(tensorPosition) {
+    let row = tensorPosition[0]
+    let col = tensorPosition[1]
+
+    let x = row * CUBE_SIZE
+    let z = col * CUBE_SIZE
+
+    return [x, z]
 }
 
 let state = "moving"
@@ -169,62 +199,83 @@ function addToPositionPath() {
     }
 }
 
-// TODO: change base car position
-// TODO: caller un truc lorsque la voiture est sur la fin
+function isTheEndReached() {
+    const rowCol = getTensorPosition()
+    const row = rowCol[0]
+    const col = rowCol[1]
+
+    return row === END[0] && col === END[1]
+
+}
 
 onLoop(({delta}) => {
-    console.log("state=" + state + " - toDirection=" + toDirection + " - carOrientation=" + carOrientation)
-    if (boxRef.value) {
-        switch (state) {
-            case "moving":
-                if (isNextCubeAnIntersection()) {
-                    state = "stopped"
-                    cubeToCross = getTensorPosition()
-                    nextDirection = null
-                    break;
-                } else {
-                    moveMap(delta)
-                    break;
-                }
-            case "stopped":
-                if (nextDirection !== null && getAvailableTurns().includes(nextDirection)) {
-                    console.log("availableTurns=" + getAvailableTurns())
-                    state = "crossing"
-                    toDirection = nextDirection
-                    break;
-                } else {
-                    break;
-                }
-            case "crossing":
-                if (cubeToCross !== null && cubeToCross[0] === getTensorPosition()[0] && cubeToCross[1] === getTensorPosition()[1]) {
-                    if (distanceToCross === null) {
-                        distanceToCross = CUBE_SIZE
-                    } else if (distanceToCross > CUBE_SIZE / 2) {
-                        distanceToCross -= moveMap(delta)
+    if(getShowModal()){
+        return
+    }
+    if (START !== null && carPosition === null) {
+        carPosition = getRealWorldCoordinates(START)
+    }
+    else{
+        console.log("state=" + state + " - toDirection=" + toDirection + " - carOrientation=" + carOrientation + ' - distanceToCross='+distanceToCross + " - showModal="+ getShowModal())
+        if (boxRef.value) {
+            if (isTheEndReached() && getShowModal() === false) {
+                carPosition = null
+                setCarOrientation("up")
+                setShowModal(true)
+                return
+            }
+            switch (state) {
+                case "moving":
+                    if (isNextCubeAnIntersection()) {
+                        state = "stopped"
+                        cubeToCross = getTensorPosition()
+                        nextDirection = null
                         break;
-                    } else if (distanceToCross > 0) {
-                        if (carOrientation !== toDirection) {
-                            carOrientation = toDirection
-                            path.push(toDirection)
+                    } else {
+                        moveMap(delta)
+                        break;
+                    }
+                case "stopped":
+                    if (nextDirection !== null && getAvailableTurns().includes(nextDirection)) {
+                        state = "crossing"
+                        toDirection = nextDirection
+                        break;
+                    } else {
+                        break;
+                    }
+                case "crossing":
+                    if (cubeToCross !== null && cubeToCross[0] === getTensorPosition()[0] && cubeToCross[1] === getTensorPosition()[1]) {
+                        if (distanceToCross === null) {
+                            distanceToCross = CUBE_SIZE
+                        } else if (distanceToCross > CUBE_SIZE / 2) {
+                            distanceToCross -= moveMap(delta)
+                            break;
+                        } else if (distanceToCross > 0) {
+                            if (carOrientation !== toDirection) {
+                                setCarOrientation(toDirection)
+                            }
+                            distanceToCross -= moveMap(delta)
+                            break;
+                        } else {
+                            distanceToCross = null
+                            break;
                         }
                         break;
                     } else {
                         distanceToCross = null
+                        state = "moving"
                         break;
                     }
-                    break;
-                } else {
-                    distanceToCross = null
-                    state = "moving"
-                    break;
-                }
+            }
+            addToPositionPath()
         }
-        addToPositionPath()
     }
+
 })
 </script>
 <template>
     <div class="container">
+        <ResultModal :show-modal="showModal" @close-modal="resetMap()"/>
         <div class="gamePad">
             <br>
             <button class="arrows" @click="move('up')"><img src="../assets/arrow.svg" class="up"></button>
@@ -268,8 +319,13 @@ import {OrbitControls} from "@tresjs/cientos";
 const CUBE_SIZE = 400
 const CAR_SIZE = 200
 
+let setShowModal = null
+let getShowModal = null
+
+let START = null
+let END = null
+
 let nextDirection = null
-console.log(nextDirection)
 
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
@@ -290,13 +346,27 @@ export default {
                 dimensions: [0.5, 0.5, 0.5]
             },
             map: [],
+            showModal: false,
             intersection: [],
             tensor: tensor,
             speedTensor: speedTensor,
             stopTensor: stopTensor,
+            start : [4, 6],
+            end : [10, 14]
         }
     },
     methods: {
+        resetMap() {
+            setShowModal(false)
+            this.tensorToMap()
+            this.tensorToIntersection()
+        },
+        getShowModal() {
+            return this.showModal
+        },
+        setShowModal(showModal) {
+            this.showModal = showModal
+        },
         robustGet(map, row, col = null) {
             if (row < 0) {
                 return null
@@ -374,15 +444,23 @@ export default {
         },
         tensorToMap() {
             let map = []
+            let startXOffset = this.start[0] * CUBE_SIZE
+            let startZOffset = this.start[1] * CUBE_SIZE
+
+            map.push({
+                position: [this.end[0] * CUBE_SIZE - startXOffset, CAR_SIZE, this.end[1] * CUBE_SIZE - startZOffset],
+                map: 'other',
+                dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
+            })
             for (let i = 0; i < this.tensor.length; i++) {
                 for (let j = 0; j < this.tensor[i].length; j++) {
                     if (this.tensor[i][j] === 1) map.push({
-                        position: [i * CUBE_SIZE, -CAR_SIZE, j * CUBE_SIZE],
+                        position: [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset],
                         map: this.findAppropriateMap([i, j]),
                         dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
                     })
                     if (this.tensor[i][j] === 0) map.push({
-                        position: [i * CUBE_SIZE, -CAR_SIZE, j * CUBE_SIZE],
+                        position: [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset],
                         map: 'grass',
                         dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
                     })
@@ -391,16 +469,18 @@ export default {
             this.map = map
         },
         tensorToIntersection() {
+            let startXOffset = this.start[0] * CUBE_SIZE
+            let startZOffset = this.start[1] * CUBE_SIZE
             let intersection = []
             for (let i = 0; i < this.stopTensor.length; i++) {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
                     if (this.stopTensor[i][j] === 1) intersection.push({
-                        position: [i * CUBE_SIZE, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE],
+                        position: [i * CUBE_SIZE - startXOffset, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE - startZOffset],
                         color: 'red',
                         dimensions: [0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE]
                     })
                     if (this.stopTensor[i][j] === 2) intersection.push({
-                        position: [i * CUBE_SIZE, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE],
+                        position: [i * CUBE_SIZE - startXOffset, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE -startZOffset],
                         color: 'blue',
                         dimensions: [0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE]
                     })
@@ -410,6 +490,10 @@ export default {
         },
     },
     mounted() {
+        START = this.start
+        END = this.end
+        setShowModal = this.setShowModal
+        getShowModal = this.getShowModal
         this.tensorToMap();
         this.tensorToIntersection();
     }
