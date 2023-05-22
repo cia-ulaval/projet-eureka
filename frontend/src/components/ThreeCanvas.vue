@@ -1,22 +1,22 @@
 <script setup>
 import {useFBX} from '@tresjs/cientos'
 import {shallowRef} from "vue";
-import {useRenderLoop, useTexture} from "@tresjs/core";
+import {useRenderLoop} from "@tresjs/core";
 import ResultModal from "@/components/ResultModal.vue";
 
 
-const upDownTexture = await useTexture({
-    map: '/textures/upDown.jpg'
-});
-const leftRightTexture = await useTexture({
-    map: '/textures/leftRight.jpg'
-});
-const otherTexture = await useTexture({
-    map: '/textures/otherIntersection.jpg'
-});
-const grassTexture = await useTexture({
-    map: '/textures/grass.jpg'
-});
+// const upDownTexture = await useTexture({
+//     map: '/textures/upDown.jpg'
+// });
+// const leftRightTexture = await useTexture({
+//     map: '/textures/leftRight.jpg'
+// });
+// const otherTexture = await useTexture({
+//     map: '/textures/otherIntersection.jpg'
+// });
+// const grassTexture = await useTexture({
+//     map: '/textures/grass.jpg'
+// });
 
 
 const model = await useFBX('/models/Car.fbx')
@@ -290,12 +290,13 @@ onLoop(({delta}) => {
             <TresScene>
                 <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
                     <TresBoxGeometry :args="cube.dimensions"/>
+                    <TresMeshBasicMaterial color="red"/>
 
-                    <TresMeshStandardMaterial v-if="cube.map === 'upDown'" :map="upDownTexture.map"/>
-                    <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map"/>
-                    <TresMeshStandardMaterial v-else-if="cube.map === 'other'" :map="otherTexture.map"/>
-                    <TresMeshStandardMaterial v-else-if="cube.map === 'grass'" :map="grassTexture.map"/>
-                    <TresMeshStandardMaterial v-else :map="grassTexture.map"/>
+<!--                    <TresMeshStandardMaterial v-if="cube.map === 'upDown'" :map="upDownTexture.map"/>-->
+<!--                    <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map"/>-->
+<!--                    <TresMeshStandardMaterial v-else-if="cube.map === 'other'" :map="otherTexture.map"/>-->
+<!--                    <TresMeshStandardMaterial v-else-if="cube.map === 'grass'" :map="grassTexture.map"/>-->
+<!--                    <TresMeshStandardMaterial v-else :map="grassTexture.map"/>-->
                 </TresMesh>
                 <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position"
                           ref="intersectionRef">
