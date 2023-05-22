@@ -1,2 +1,4 @@
 flask
 pytest
+numpy
+flask_cors
