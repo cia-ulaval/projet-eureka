@@ -1,5 +1,7 @@
 <template>
-  <ThreeCanvas/>
+    <Suspense>
+        <ThreeCanvas/>
+    </Suspense>
 </template>
 
 <script>
@@ -8,7 +10,7 @@ import ThreeCanvas from "@/components/ThreeCanvas.vue";
 export default {
   name: 'App',
   components: {
-    ThreeCanvas: ThreeCanvas
+      ThreeCanvas: ThreeCanvas,
   }
 }
 </script>
