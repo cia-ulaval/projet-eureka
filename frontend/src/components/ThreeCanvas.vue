@@ -38,6 +38,7 @@ function moveMap(delta) {
 
     let dx = 0
     let dy = 0
+    console.log(carOrientation)
     switch (carOrientation) {
         case "up":
             dy = 1
@@ -142,7 +143,6 @@ function getAvailableTurns() {
             turns.push("left")
         }
     }
-
     return turns
 }
 
@@ -239,6 +239,9 @@ onLoop(({delta}) => {
                     if (nextDirection !== null && getAvailableTurns().includes(nextDirection)) {
                         state = "crossing"
                         toDirection = nextDirection
+                        if (carOrientation !== toDirection) {
+                                setCarOrientation(toDirection)
+                            }
                         break;
                     } else {
                         break;
@@ -290,9 +293,8 @@ onLoop(({delta}) => {
             <TresScene>
                 <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
                     <TresBoxGeometry :args="cube.dimensions"/>
-
-                    <TresMeshStandardMaterial v-if="cube.map === 'upDown'" :map="upDownTexture.map"/>
-                    <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map"/>
+                    <TresMeshStandardMaterial v-if="cube.map === 'upDown'" :map="upDownTexture.map" :color="cube.color"/>
+                    <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map" :color="cube.color"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'other'" :map="otherTexture.map"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'grass'" :map="grassTexture.map"/>
                     <TresMeshStandardMaterial v-else :map="grassTexture.map"/>
@@ -306,7 +308,7 @@ onLoop(({delta}) => {
                     <TresMesh v-bind="model"/>
                 </Suspense>
             </TresScene>
-            <TresAmbientLight/>
+            <TresAmbientLight :intensity="4"/>
             map.length/2
         </TresCanvas>
     </div>
@@ -466,9 +468,8 @@ export default {
                       let position = [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset]
                       let appropriateMap = this.findAppropriateMap([i, j])
                       let dimensions = [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
-                      let color = 'black'
+                      let color = 'white'
                       // Shows traffic
-                      console.log(this.trafficTensor[i][j])
                       if (0.25 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.5 ) color = 'yellow'
                       else if (0.5 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.75 ) color = 'orange'
                       else if (0.75 <= this.trafficTensor[i][j]) color = 'red'
