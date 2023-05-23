@@ -38,7 +38,6 @@ function moveMap(delta) {
 
     let dx = 0
     let dy = 0
-    console.log(carOrientation)
     switch (carOrientation) {
         case "up":
             dy = 1
@@ -221,7 +220,9 @@ onLoop(({delta}) => {
             if (isTheEndReached() && getShowModal() === false) {
                 carPosition = null
                 setCarOrientation("up")
+                fetchScore(path)
                 setShowModal(true)
+                setCamera()
                 return
             }
             switch (state) {
@@ -278,7 +279,7 @@ onLoop(({delta}) => {
 </script>
 <template>
     <div class="container">
-        <ResultModal :show-modal="showModal" @close-modal="resetMap()"/>
+        <ResultModal :show-modal="showModal" :score="score" :aiScore="aiScore" @close-modal="resetMap()"/>
         <div class="gamePad">
             <br>
             <button class="arrows" @click="move('up')"><img src="../assets/arrow.svg" class="up"></button>
@@ -288,7 +289,7 @@ onLoop(({delta}) => {
             <button class="arrows" @click="move('right')"><img src="../assets/arrow.svg" class="right"></button>
         </div>
         <TresCanvas clear-color="#82DBC5" window-size="true" class="canvas">
-            <TresPerspectiveCamera :position="[0, 300, -800]" :look-at="mapCenter" :far="100000"/>
+            <TresPerspectiveCamera :position="camera.position" :look-at="mapCenter" :far="camera.far"/>
             <OrbitControls/>
             <TresScene>
                 <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
@@ -323,6 +324,8 @@ const CAR_SIZE = 200
 
 let setShowModal = null
 let getShowModal = null
+let fetchScore = null
+let setCamera = null
 
 let START = null
 let END = null
@@ -333,6 +336,7 @@ import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
 import { getMap } from '@/js/map.js'
+import { getScore } from "@/js/score";
 
 export default {
     name: 'ThreeCanvas',
@@ -342,6 +346,10 @@ export default {
     },
     data() {
         return {
+          camera: {
+            position: [0, 300, -800],
+            far: 100000
+          },
             mapCenter: [15, 1, 13],
             car: {
                 position: [15, 1, 13],
@@ -356,7 +364,10 @@ export default {
             stopTensor: stopTensor,
             trafficTensor : [],
             start : [],
-            end : []
+            end : [],
+            score : {},
+            aiScore : {},
+            aiPath : []
         }
     },
     computed: {
@@ -367,6 +378,7 @@ export default {
     methods: {
         resetMap() {
             setShowModal(false)
+            this.setCamera()
             this.tensorToMap()
             this.tensorToIntersection()
         },
@@ -376,6 +388,16 @@ export default {
         setShowModal(showModal) {
             this.showModal = showModal
         },
+        setCamera() {
+              if (this.showModal) {
+                  this.camera.position = [0, 10000, -8000]
+                  this.mapCenter = [15, -10, 13]
+                  this.camera.far = null
+              } else {
+                  this.camera.position = [0, 300, -800]
+                  this.camera.far = 100000
+              }
+          },
         robustGet(map, row, col = null) {
             if (row < 0) {
                 return null
@@ -509,11 +531,19 @@ export default {
           this.start = mapInfos.start;
           this.end = mapInfos.end;
           this.trafficTensor = mapInfos.traffic;
-      }
+        },
+        async fetchScore(path) {
+          const scores = await getScore(path);
+          this.score = scores.human_stats;
+          this.aiScore = scores.AI_stats;
+          this.aiPath = scores.AI_path;
+        }
     },
     async mounted() {
         setShowModal = this.setShowModal
         getShowModal = this.getShowModal
+        fetchScore = this.fetchScore
+        setCamera = this.setCamera
         await this.fetchMap();
         START = this.start
         END = this.end

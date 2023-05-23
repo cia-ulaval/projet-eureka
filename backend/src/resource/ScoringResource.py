@@ -19,8 +19,8 @@ class ScoringResource:
 
         @self.__app.route("/score", methods=["POST"])
         def get_score():
-            score_request = json.loads(request.data)
-            human_path : list[(int, int)] = score_request["path"]
+            score_request = request.get_json()
+            human_path: list[(int, int)] = score_request["path"]
             co2_total, wait_total = self.__scoring_service.get_score(human_path)
             ai_co2_total, ai_wait_total, ai_path = self.__scoring_service.get_ai_score()
 
