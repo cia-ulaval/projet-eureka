@@ -1,19 +1,27 @@
 <script setup>
+import stopTensor from '../data/stopTensor.json'
+
 import {useFBX} from '@tresjs/cientos'
 import {shallowRef} from "vue";
 
 const CAR_SCALE = 0.07
 
-const model = await useFBX('/models/scene.fbx')
+
+const carModel = await useFBX('/models/scene.fbx')
+
+let intersection = await createIntersection()
 
 let carPos = [20, 0, 20]
 let carRot = [67.5, 0, 67.5]
 const carRef = shallowRef()
-const car = model
+const car = carModel
 car.position.set(carPos[0], 0, carPos[2])
 car.rotation.set(carRot[0], carRot[1], carRot[2])
 car.scale.set(CAR_SCALE, CAR_SCALE, CAR_SCALE)
 car.updateMatrixWorld()
+
+
+
 
 const handleMove = (direction) => {
     switch (direction) {
@@ -47,6 +55,21 @@ function moveCar(){
     car.rotation.set(carRot[0], carRot[1], carRot[2])
     car.updateMatrixWorld()
 }
+
+async function createIntersection(){
+    let intersection = []
+    for (let i = 0; i < stopTensor.length; i++) {
+        for (let j = 0; j < stopTensor[i].length; j++) {
+            if(stopTensor[i][j] === 1 || stopTensor[i][j] === 2){
+                intersection.push({
+                    position: [i, 0, j],
+                })
+            }
+        }
+    }
+    return intersection
+}
+
 </script>
 <template>
     <div class="container">
@@ -65,33 +88,31 @@ function moveCar(){
                     <TresBoxGeometry :args="cube.dimensions"/>
                     <TresMeshBasicMaterial :color="cube.color"/>
                 </TresMesh>
-                <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position" ref="intersectionRef">
-                    <TresBoxGeometry :args="cube.dimensions"/>
-                    <TresMeshBasicMaterial :color="cube.color"/>
-                </TresMesh>
-            <Suspense>
-                <TresMesh v-bind="car" ref="carRef"/>
-            </Suspense>
-        </TresScene>
-            <TresAmbientLight :color="0x484068" :intensity="40" />
-        map.length/2
+                <StopSign v-for="(stop, index) in intersection" :key="index" :position="stop.position"/>
+                <Suspense>
+                    <TresMesh v-bind="car" ref="carRef"/>
+                </Suspense>
+            </TresScene>
+            <TresAmbientLight :intensity="1" />
+            map.length/2
         </TresCanvas>
     </div>
 </template>
 
 <script>
 import {TresCanvas} from '@tresjs/core'
+import StopSign from "@/components/StopSign.vue";
 
 let nextDirection = null
 console.log(nextDirection)
 
 import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
-import stopTensor from '../data/stopTensor.json'
 export default {
     name: 'ThreeCanvas',
     components: {
         TresCanvas: TresCanvas,
+        StopSign: StopSign,
     },
     data(){
         return{
@@ -102,10 +123,8 @@ export default {
                 dimensions: [0.5, 0.5, 0.5]
             },
             map: [],
-            intersection: [],
             tensor: tensor,
             speedTensor: speedTensor,
-            stopTensor: stopTensor,
         }
     },
     methods: {
@@ -165,20 +184,9 @@ export default {
             }
             this.map = map
         },
-        tensorToIntersection() {
-            let intersection = []
-            for (let i = 0; i < this.stopTensor.length; i++) {
-                for (let j = 0; j < this.stopTensor[i].length; j++) {
-                    if (this.stopTensor[i][j] === 1) intersection.push({position: [i, 1, j], color: 'red', dimensions: [0.3, 0.3, 0.3]})
-                    if (this.stopTensor[i][j] === 2) intersection.push({position: [i, 1, j], color: 'blue', dimensions: [0.3, 0.3, 0.3]})
-                }
-            }
-            this.intersection = intersection
-        },
     },
     mounted() {
         this.tensorToMap();
-        this.tensorToIntersection();
     }
 
 }
