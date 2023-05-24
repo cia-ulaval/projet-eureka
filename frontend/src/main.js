@@ -2,6 +2,6 @@ import { createApp } from 'vue'
 import axios from "axios";
 import App from './App.vue'
 
-axios.defaults.baseURL = "http://127.0.0.1:5000";
+axios.defaults.baseURL = "https://quiet-hamlet-73980.herokuapp.com/";
 createApp(App).mount('#app')
 
