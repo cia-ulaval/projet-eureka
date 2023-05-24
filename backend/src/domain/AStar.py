@@ -37,6 +37,7 @@ class AStar:
 
         # Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
         vitesse = float(ecolo[1][node.x][node.y]) * (1 - traffic)
+        if vitesse == 0: vitesse = 1
 
         # Dimension lumière/stop : 2 (1 : arrêt, 2 : feu de circulation)
         lum_stop = ecolo[2][node.x][node.y]
