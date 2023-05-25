@@ -17,6 +17,15 @@ const otherTexture = await useTexture({
 const grassTexture = await useTexture({
     map: '/textures/grass.jpg'
 });
+const lightTexture = await useTexture({
+    map: '/textures/streetLights.png'
+});
+const stopTexture = await useTexture({
+    map: '/textures/stop.png'
+});
+const rainbowTexture = await useTexture({
+    map: '/textures/rainbow.jpg'
+});
 
 
 const model = await useFBX('/models/Car.fbx')
@@ -302,6 +311,7 @@ onLoop(({delta}) => {
                     <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map" :color="cube.color"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'other'" :map="otherTexture.map"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'grass'" :map="grassTexture.map"/>
+                    <TresMeshStandardMaterial v-else-if="cube.map === 'rainbow'" :map="rainbowTexture.map"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'aiPath'" :color="'red'"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'humanPath'" :color="'blue'"/>
                     <TresMeshStandardMaterial v-else :map="grassTexture.map"/>
@@ -309,7 +319,8 @@ onLoop(({delta}) => {
                 <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position"
                           ref="intersectionRef">
                     <TresBoxGeometry :args="cube.dimensions"/>
-                    <TresMeshBasicMaterial :color="cube.color"/>
+                    <TresMeshStandardMaterial v-if="cube.map === 'light'" :map="lightTexture.map"/>
+                    <TresMeshStandardMaterial v-else-if="cube.map === 'stop'" :map="stopTexture.map"/>
                 </TresMesh>
                 <Suspense>
                     <TresMesh v-bind="model"/>
@@ -505,7 +516,7 @@ export default {
 
             map.push({
                 position: [this.end[0] * CUBE_SIZE - startXOffset, CAR_SIZE, this.end[1] * CUBE_SIZE - startZOffset],
-                map: 'other',
+                map: 'rainbow',
                 dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
             })
             for (let i = 0; i < this.tensor.length; i++) {
@@ -539,12 +550,12 @@ export default {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
                     if (this.stopTensor[i][j] === 1) intersection.push({
                         position: [i * CUBE_SIZE - startXOffset, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE - startZOffset],
-                        color: 'red',
+                        map: 'stop',
                         dimensions: [0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE]
                     })
                     if (this.stopTensor[i][j] === 2) intersection.push({
                         position: [i * CUBE_SIZE - startXOffset, CUBE_SIZE - CAR_SIZE, j * CUBE_SIZE -startZOffset],
-                        color: 'blue',
+                        map: 'light',
                         dimensions: [0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE, 0.3 * CUBE_SIZE]
                     })
                 }
