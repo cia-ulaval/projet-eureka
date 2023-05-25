@@ -23,6 +23,7 @@ const model = await useFBX('/models/Car.fbx')
 
 const boxRef = shallowRef(null)
 const intersectionRef = shallowRef(null)
+const cameraRef = shallowRef(null)
 
 const {onLoop} = useRenderLoop()
 
@@ -65,6 +66,10 @@ function moveMap(delta) {
         cube.position.z -= dy * distance;
         cube.position.x -= dx * distance;
     }
+    let camera = cameraRef.value;
+    camera.position.z -= dy * distance
+    camera.position.x -= dx * distance
+
     carPosition[0] += dx * distance
     carPosition[1] += dy * distance
     return distance
@@ -219,6 +224,12 @@ onLoop(({delta}) => {
     if(getShowModal()){
         return
     }
+    if(cameraResetEnabled){
+        let camera = cameraRef.value
+        camera.position.set(cameraPosition[0], cameraPosition[1], cameraPosition[2])
+        camera.updateMatrixWorld()
+        cameraResetEnabled = false
+    }
     if (START !== null && carPosition === null) {
         carPosition = getRealWorldCoordinates(START)
     }
@@ -293,7 +304,7 @@ onLoop(({delta}) => {
             <button class="arrows" @click="move('right')"><img src="../assets/arrow.svg" class="right"></button>
         </div>
         <TresCanvas clear-color="#82DBC5" window-size="true" class="canvas">
-            <TresPerspectiveCamera :position="camera.position" :look-at="mapCenter" :far="camera.far"/>
+            <TresPerspectiveCamera :position="camera.position" :far="camera.far" ref="cameraRef"/>
             <OrbitControls/>
             <TresScene>
                 <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
@@ -332,6 +343,8 @@ let setShowModal = null
 let getShowModal = null
 let fetchScore = null
 let setMap = null
+let cameraResetEnabled = false
+let cameraPosition = [0, 10000, 0]
 
 let START = null
 let END = null
@@ -352,11 +365,10 @@ export default {
     },
     data() {
         return {
-          camera: {
-            position: [0, 300, -800],
-            far: 100000
-          },
-            mapCenter: [15, 1, 13],
+            camera: {
+                position: [0, 10000, 0],
+                far: 100000,
+            },
             car: {
                 position: [15, 1, 13],
                 color: 'orange',
@@ -374,12 +386,8 @@ export default {
             score : {},
             aiScore : {},
             aiPath : null,
-            humanPath : null
-        }
-    },
-    computed: {
-        carPosition(){
-            return this.car
+            humanPath : null,
+            offsetCamera : [0, 0, 0]
         }
     },
     methods: {
@@ -387,9 +395,6 @@ export default {
             this.aiPath = null
             this.path = null
             setShowModal(false)
-            this.setCamera()
-            this.tensorToMap()
-            this.tensorToIntersection()
         },
         getShowModal() {
             return this.showModal
@@ -404,15 +409,10 @@ export default {
             this.tensorToIntersection()
         },
         setCamera() {
-              if (this.showModal) {
-                  this.camera.position = [0, 10000, -8000]
-                  this.mapCenter = [15, -10, 13]
-                  this.camera.far = null
-              } else {
-                  this.camera.position = [0, 300, -800]
-                  this.camera.far = 100000
-              }
-          },
+            cameraResetEnabled = true
+            cameraPosition = [this.offsetCamera[0], this.offsetCamera[1], this.offsetCamera[2]]
+            console.log(cameraPosition)
+        },
         robustGet(map, row, col = null) {
             if (row < 0) {
                 return null
@@ -470,39 +470,10 @@ export default {
                     break;
             }
         },
-        findNextIntersection() {
-            const row = this.car.position[0];
-            const col = this.car.position[2];
-            const intersections = this.intersection;
-            const map = this.tensor;
-
-            // Check left intersection
-            if (col > 0 && map[row][col - 1] === 2) {
-                intersections.push([row, col - 1]);
-            }
-
-            // Check right intersection
-            if (col < map[row].length - 1 && map[row][col + 1] === 2) {
-                intersections.push([row, col + 1]);
-            }
-
-            // Check up intersection
-            if (row > 0 && map[row - 1][col] === 2) {
-                intersections.push([row - 1, col]);
-            }
-
-            // Check down intersection
-            if (row < map.length - 1 && map[row + 1][col] === 2) {
-                intersections.push([row + 1, col]);
-            }
-
-            return intersections;
-        },
         tensorToMap() {
             let map = []
             let startXOffset = this.start[0] * CUBE_SIZE
             let startZOffset = this.start[1] * CUBE_SIZE
-
             map.push({
                 position: [this.end[0] * CUBE_SIZE - startXOffset, CAR_SIZE, this.end[1] * CUBE_SIZE - startZOffset],
                 map: 'other',
@@ -534,6 +505,7 @@ export default {
         tensorToIntersection() {
             let startXOffset = this.start[0] * CUBE_SIZE
             let startZOffset = this.start[1] * CUBE_SIZE
+            this.offsetCamera = [startXOffset, 10000, startZOffset]
             let intersection = []
             for (let i = 0; i < this.stopTensor.length; i++) {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
@@ -604,6 +576,7 @@ export default {
         END = this.end
         this.tensorToIntersection();
         this.tensorToMap();
+        this.setCamera();
     }
 
 }
@@ -677,3 +650,4 @@ img {
     grid-area: right;
 }
 </style>
+
