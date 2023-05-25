@@ -526,11 +526,11 @@ export default {
                       let position = [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset]
                       let appropriateMap = this.findAppropriateMap([i, j])
                       let dimensions = [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
-                      let color = 'white'
-                      // Shows traffic
-                      if (0.25 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.5 ) color = 'yellow'
-                      else if (0.5 <= this.trafficTensor[i][j] && this.trafficTensor[i][j] < 0.75 ) color = 'orange'
-                      else if (0.75 <= this.trafficTensor[i][j]) color = 'red'
+                      let color = 'orange'
+                      // Shows speed limit
+                      if (this.speedTensor[i][j] === 30 ) color = 'red'
+                      else if (this.speedTensor[i][j] === 70 ) color = 'yellow'
+                      else if (this.speedTensor[i][j] === 100) color = 'green'
                       map.push({position: position, color: color, dimensions: dimensions, map: appropriateMap})
                     }
                     if (this.tensor[i][j] === 0) map.push({
