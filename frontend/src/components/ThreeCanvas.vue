@@ -38,7 +38,6 @@ function moveMap(delta) {
 
     let dx = 0
     let dy = 0
-    console.log(carOrientation)
     switch (carOrientation) {
         case "up":
             dy = 1
@@ -208,6 +207,14 @@ function isTheEndReached() {
 
 }
 
+async function endGame() {
+    carPosition = null
+    setCarOrientation("up")
+    await fetchScore(path)
+    setShowModal(true)
+    setMap(path)
+}
+
 onLoop(({delta}) => {
     if(getShowModal()){
         return
@@ -219,9 +226,7 @@ onLoop(({delta}) => {
         console.log("state=" + state + " - toDirection=" + toDirection + " - carOrientation=" + carOrientation + ' - distanceToCross='+distanceToCross + " - showModal="+ getShowModal())
         if (boxRef.value) {
             if (isTheEndReached() && getShowModal() === false) {
-                carPosition = null
-                setCarOrientation("up")
-                setShowModal(true)
+                endGame()
                 return
             }
             switch (state) {
@@ -278,8 +283,8 @@ onLoop(({delta}) => {
 </script>
 <template>
     <div class="container">
-        <ResultModal :show-modal="showModal" @close-modal="resetMap()"/>
-        <div class="gamePad">
+        <ResultModal :show-modal="showModal" :score="score" :aiScore="aiScore" @close-modal="resetMap()"/>
+        <div v-if="!showModal" class="gamePad">
             <br>
             <button class="arrows" @click="move('up')"><img src="../assets/arrow.svg" class="up"></button>
             <br>
@@ -288,7 +293,7 @@ onLoop(({delta}) => {
             <button class="arrows" @click="move('right')"><img src="../assets/arrow.svg" class="right"></button>
         </div>
         <TresCanvas clear-color="#82DBC5" window-size="true" class="canvas">
-            <TresPerspectiveCamera :position="[0, 300, -800]" :look-at="mapCenter" :far="100000"/>
+            <TresPerspectiveCamera :position="camera.position" :look-at="mapCenter" :far="camera.far"/>
             <OrbitControls/>
             <TresScene>
                 <TresMesh v-for="(cube, index) in map" :key="index" :position="cube.position" ref="boxRef">
@@ -297,6 +302,8 @@ onLoop(({delta}) => {
                     <TresMeshStandardMaterial v-else-if="cube.map === 'leftRight'" :map="leftRightTexture.map" :color="cube.color"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'other'" :map="otherTexture.map"/>
                     <TresMeshStandardMaterial v-else-if="cube.map === 'grass'" :map="grassTexture.map"/>
+                    <TresMeshStandardMaterial v-else-if="cube.map === 'aiPath'" :color="'red'"/>
+                    <TresMeshStandardMaterial v-else-if="cube.map === 'humanPath'" :color="'blue'"/>
                     <TresMeshStandardMaterial v-else :map="grassTexture.map"/>
                 </TresMesh>
                 <TresMesh v-for="(cube, index) in intersection" :key="index" :position="cube.position"
@@ -323,6 +330,8 @@ const CAR_SIZE = 200
 
 let setShowModal = null
 let getShowModal = null
+let fetchScore = null
+let setMap = null
 
 let START = null
 let END = null
@@ -333,6 +342,7 @@ import tensor from '../data/tensor.json'
 import speedTensor from '../data/speedTensor.json'
 import stopTensor from '../data/stopTensor.json'
 import { getMap } from '@/js/map.js'
+import { getScore } from "@/js/score";
 
 export default {
     name: 'ThreeCanvas',
@@ -342,6 +352,10 @@ export default {
     },
     data() {
         return {
+          camera: {
+            position: [0, 300, -800],
+            far: 100000
+          },
             mapCenter: [15, 1, 13],
             car: {
                 position: [15, 1, 13],
@@ -356,7 +370,11 @@ export default {
             stopTensor: stopTensor,
             trafficTensor : [],
             start : [],
-            end : []
+            end : [],
+            score : {},
+            aiScore : {},
+            aiPath : null,
+            humanPath : null
         }
     },
     computed: {
@@ -366,7 +384,10 @@ export default {
     },
     methods: {
         resetMap() {
+            this.aiPath = null
+            this.path = null
             setShowModal(false)
+            this.setCamera()
             this.tensorToMap()
             this.tensorToIntersection()
         },
@@ -376,6 +397,22 @@ export default {
         setShowModal(showModal) {
             this.showModal = showModal
         },
+        setMap(path) {
+            this.humanPath = path
+            this.setCamera()
+            this.pathToMap()
+            this.tensorToIntersection()
+        },
+        setCamera() {
+              if (this.showModal) {
+                  this.camera.position = [0, 10000, -8000]
+                  this.mapCenter = [15, -10, 13]
+                  this.camera.far = null
+              } else {
+                  this.camera.position = [0, 300, -800]
+                  this.camera.far = 100000
+              }
+          },
         robustGet(map, row, col = null) {
             if (row < 0) {
                 return null
@@ -392,9 +429,19 @@ export default {
             return map[row][col]
         },
         findAppropriateMap(tensorCoordinate) {
+            function checkPts(pt) {
+              return pt[0] === tensorCoordinate[0] && pt[1] === tensorCoordinate[1]
+            }
+
+            if (this.aiPath && this.aiPath.find(checkPts)){
+                return 'aiPath'
+            }
+            if (this.humanPath && this.humanPath.find(checkPts)){
+                return 'humanPath'
+            }
+
             const row = tensorCoordinate[0];
             const col = tensorCoordinate[1];
-
             // if the cube at the right and the left are 1, and up and down are 0, then it's a left-right cube
             if (this.robustGet(this.tensor, row, col - 1) === 1 && this.robustGet(this.tensor, row, col + 1) === 1 && this.robustGet(this.tensor, row - 1, col) !== 1 && this.robustGet(this.tensor, row + 1, col) !== 1) {
                 return 'upDown'
@@ -504,16 +551,54 @@ export default {
             }
             this.intersection = intersection
         },
+        pathToMap()
+        {
+          let map = []
+            let startXOffset = this.start[0] * CUBE_SIZE
+            let startZOffset = this.start[1] * CUBE_SIZE
+
+            map.push({
+                position: [this.end[0] * CUBE_SIZE - startXOffset, CAR_SIZE, this.end[1] * CUBE_SIZE - startZOffset],
+                map: 'other',
+                dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
+            })
+            for (let i = 0; i < this.tensor.length; i++) {
+                for (let j = 0; j < this.tensor[i].length; j++) {
+                    if (this.tensor[i][j] === 1)
+                    {
+                      let position = [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset]
+                      let appropriateMap = this.findAppropriateMap([i, j])
+                      let dimensions = [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
+                      let color = 'white'
+                      map.push({position: position, color: color, dimensions: dimensions, map: appropriateMap})
+                    }
+                    if (this.tensor[i][j] === 0) map.push({
+                        position: [i * CUBE_SIZE - startXOffset, -CAR_SIZE, j * CUBE_SIZE - startZOffset],
+                        map: 'grass',
+                        dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
+                    })
+                }
+            }
+            this.map = map
+        },
         async fetchMap() {
           const mapInfos = await getMap();
           this.start = mapInfos.start;
           this.end = mapInfos.end;
           this.trafficTensor = mapInfos.traffic;
-      }
+        },
+        async fetchScore(path) {
+          const scores = await getScore(path);
+          this.score = scores.human_stats;
+          this.aiScore = scores.AI_stats;
+          this.aiPath = scores.AI_path;
+        }
     },
     async mounted() {
         setShowModal = this.setShowModal
         getShowModal = this.getShowModal
+        fetchScore = this.fetchScore
+        setMap = this.setMap
         await this.fetchMap();
         START = this.start
         END = this.end

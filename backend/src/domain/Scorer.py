@@ -56,6 +56,7 @@ class Scorer:
 
             # Dimension de la vitesse : 1 (vitesse (30, 50 70, 100))
             vitesse = float(ecolo[1][x][y]) * (1 - traffic)
+            if vitesse == 0: vitesse = 1
 
             # Dimension lumière/stop : 2
             lum_stop = ecolo[2][x][y]
