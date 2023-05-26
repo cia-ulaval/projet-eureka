@@ -671,20 +671,28 @@ img {
 
 .up {
     grid-area: up;
+    width: 100%;
+    height: auto;
 }
 
 .left {
     transform: rotate(-90deg);
     grid-area: left;
+    width: 100%;
+    height: auto;
 }
 
 .down {
     transform: rotate(180deg);
     grid-area: down;
+    width: 100%;
+    height: auto;
 }
 
 .right {
     transform: rotate(90deg);
     grid-area: right;
+    width: 100%;
+    height: auto;
 }
 </style>
