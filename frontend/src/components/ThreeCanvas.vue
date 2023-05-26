@@ -570,7 +570,7 @@ export default {
 
             map.push({
                 position: [this.end[0] * CUBE_SIZE - startXOffset, CAR_SIZE, this.end[1] * CUBE_SIZE - startZOffset],
-                map: 'other',
+                map: 'rainbow',
                 dimensions: [CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]
             })
             for (let i = 0; i < this.tensor.length; i++) {
