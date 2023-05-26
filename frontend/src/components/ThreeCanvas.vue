@@ -655,7 +655,6 @@ img {
 }
 
 .gamePad {
-    transform: rotate(-55deg);
     position: absolute;
     left: 770px;
     top: 500px;
