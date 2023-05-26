@@ -43,7 +43,7 @@ function moveMap(delta) {
     const row = rowCol[0]
     const col = rowCol[1]
 
-    const speed = speedTensor[row][col] ** 2 / 5
+    const speed = speedTensor[row][col] ** 2 / 3
 
     let dx = 0
     let dy = 0
