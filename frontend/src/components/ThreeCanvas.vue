@@ -235,6 +235,8 @@ onLoop(({delta}) => {
     }
     if(cameraResetEnabled){
         let camera = cameraRef.value
+        console.log(camera.rotation)
+        camera.rotation.set(-1.5707953267948966,0,2 * 1.5707953267948966)
         camera.position.set(cameraPosition[0], cameraPosition[1], cameraPosition[2])
         camera.updateMatrixWorld()
         cameraResetEnabled = false
@@ -421,7 +423,11 @@ export default {
         },
         setCamera() {
             cameraResetEnabled = true
-            cameraPosition = [this.offsetCamera[0], this.offsetCamera[1], this.offsetCamera[2]]
+            let positionMagic = [0, 1, 13];
+            let startXOffset = positionMagic[0] * CUBE_SIZE
+            let startZOffset = positionMagic[2] * CUBE_SIZE
+            this.offsetCamera = [startXOffset, 12000, startZOffset]
+            cameraPosition = [this.offsetCamera[0], this.offsetCamera[1], -this.offsetCamera[2]]
             console.log(cameraPosition)
         },
         robustGet(map, row, col = null) {
@@ -516,7 +522,6 @@ export default {
         tensorToIntersection() {
             let startXOffset = this.start[0] * CUBE_SIZE
             let startZOffset = this.start[1] * CUBE_SIZE
-            this.offsetCamera = [startXOffset, 10000, startZOffset]
             let intersection = []
             for (let i = 0; i < this.stopTensor.length; i++) {
                 for (let j = 0; j < this.stopTensor[i].length; j++) {
