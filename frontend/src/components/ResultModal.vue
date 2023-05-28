@@ -9,7 +9,7 @@
         <div class="scoreboard">
           <div class="scoreboard-item">
             <h3 class="score-label">CO2</h3>
-            <p class="score-value">{{ score.co2 }} g/km</p>
+            <p class="score-value">{{ score.co2 }} g</p>
           </div>
           <div class="scoreboard-item">
             <h3 class="score-label">Temps d'arrêt</h3>
@@ -28,7 +28,7 @@
         <div class="scoreboard">
           <div class="scoreboard-item">
             <h3 class="score-label">CO2</h3>
-            <p class="score-value">{{ aiScore.co2 }} g/km</p>
+            <p class="score-value">{{ aiScore.co2 }} g</p>
           </div>
           <div class="scoreboard-item">
             <h3 class="score-label">Temps d'arrêt</h3>
